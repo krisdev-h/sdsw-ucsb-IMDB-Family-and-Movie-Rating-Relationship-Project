@@ -1,0 +1,173 @@
+import requests
+import bs4
+import tabulate
+from bs4 import BeautifulSoup
+from tabulate import tabulate
+
+
+## Animation Data Frame (Index, Title, Year, Rating, Genre)
+# Part 1, first 50 data entries
+url_animation_1 = "https://www.imdb.com/search/title/?title_type=feature&genres=animation&view=simple&ref_=adv_prv"
+response_animation_1 = requests.get(url_animation_1)
+
+page_animation_1 = response_animation_1.text
+
+soup_animation_1 = BeautifulSoup(page_animation_1, 'html.parser')
+beautiful_page_animation_1 = soup_animation_1.get_text()
+
+ratings_animation_1 = []
+years_animation_1 = []
+titles_animation_1 = []
+movie_nums_animation_1 = []
+
+lines_animation_1 = beautiful_page_animation_1.splitlines()
+for line in lines_animation_1:
+        if "(20" in line and ")" in line or '(19' in line and ')' in line:
+            years_animation_1.append(line)
+
+rep_years_animation_1 = []
+nrep_years_animation_1 = []
+year_indices_animation_1 = []
+
+for year in years_animation_1:
+    if lines_animation_1.count(year) > 1:
+        if year not in rep_years_animation_1:
+            rep_years_animation_1.append(year)
+    if lines_animation_1.count(year) == 1:
+        nrep_years_animation_1.append(year)
+
+for i in range(len(rep_years_animation_1)):
+    first_instance = lines_animation_1.index(rep_years_animation_1[i])
+    year_indices_animation_1.append(first_instance)
+
+    for j, item in enumerate(lines_animation_1[first_instance+1:], start=first_instance+1):
+        if item == rep_years_animation_1[i]:
+            year_indices_animation_1.append(j)
+
+for year in nrep_years_animation_1:
+    if year in lines_animation_1:
+        index = lines_animation_1.index(year)
+        year_indices_animation_1.append(index)
+
+
+for index in sorted(year_indices_animation_1):
+    title = lines_animation_1[index-1]
+    titles_animation_1.append(title)
+
+    rating = lines_animation_1[index+6]
+    ratings_animation_1.append(rating)
+
+    movie_num = lines_animation_1[index-3]
+    movie_nums_animation_1.append(movie_num) 
+    
+
+ratings_animation_1 = [rating.lstrip() for rating in ratings_animation_1]
+for i in range(len(ratings_animation_1)):
+    if ratings_animation_1[i] == '':
+        ratings_animation_1[i] = "None"
+
+
+for i in range(len(years_animation_1)):
+    for j in range(len(years_animation_1[i])):
+        if years_animation_1[i][j].isnumeric():
+            number_index = years_animation_1[i].find(years_animation_1[i][j])
+            years_animation_1[i] = years_animation_1[i][number_index:number_index+4]
+            break
+
+
+table_data_animation_1 = list(zip(movie_nums_animation_1, titles_animation_1, years_animation_1, ratings_animation_1))
+headers_1 = ["Movie Number", "Title", "Year", "Rating"]
+
+print(tabulate(table_data_animation_1, headers=headers_1))
+
+import pandas as pd
+df_animation_1 = pd.DataFrame(table_data_animation_1, columns=['Index', 'Title', 'Year', 'Rating'])
+df_animation_1
+df_animation_1['Title']
+df_animation_1['Genre'] = 'Animation'
+df_animation_1
+
+# Part 2, next 50 data entries
+url_animation_2 = "https://www.imdb.com/search/title/?title_type=feature&genres=animation&view=simple&start=51&ref_=adv_nxt"
+response_animation_2 = requests.get(url_animation_2)
+
+page_animation_2 = response_animation_2.text
+
+soup_animation_2 = BeautifulSoup(page_animation_2, 'html.parser')
+beautiful_page_animation_2 = soup_animation_2.get_text()
+
+ratings_animation_2 = []
+years_animation_2 = []
+titles_animation_2 = []
+movie_nums_animation_2 = []
+
+lines_animation_2 = beautiful_page_animation_2.splitlines()
+for line in lines_animation_2:
+        if "(20" in line and ")" in line or '(19' in line and ')' in line:
+            years_animation_2.append(line)
+
+rep_years_animation_2 = []
+nrep_years_animation_2 = []
+year_indices_animation_2 = []
+
+for year in years_animation_2:
+    if lines_animation_2.count(year) > 1:
+        if year not in rep_years_animation_2:
+            rep_years_animation_2.append(year)
+    if lines_animation_2.count(year) == 1:
+        nrep_years_animation_2.append(year)
+
+for i in range(len(rep_years_animation_2)):
+    first_instance = lines_animation_2.index(rep_years_animation_2[i])
+    year_indices_animation_2.append(first_instance)
+
+    for j, item in enumerate(lines_animation_2[first_instance+1:], start=first_instance+1):
+        if item == rep_years_animation_2[i]:
+            year_indices_animation_2.append(j)
+
+for year in nrep_years_animation_2:
+    if year in lines_animation_2:
+        index = lines_animation_2.index(year)
+        year_indices_animation_2.append(index)
+
+
+for index in sorted(year_indices_animation_2):
+    title = lines_animation_2[index-1]
+    titles_animation_2.append(title)
+
+    rating = lines_animation_2[index+6]
+    ratings_animation_2.append(rating)
+
+    movie_num = lines_animation_2[index-3]
+    movie_nums_animation_2.append(movie_num) 
+    
+
+ratings_animation_2 = [rating.lstrip() for rating in ratings_animation_2]
+for i in range(len(ratings_animation_2)):
+    if ratings_animation_2[i] == '':
+        ratings_animation_2[i] = "None"
+
+
+for i in range(len(years_animation_2)):
+    for j in range(len(years_animation_2[i])):
+        if years_animation_2[i][j].isnumeric():
+            number_index = years_animation_2[i].find(years_animation_2[i][j])
+            years_animation_2[i] = years_animation_2[i][number_index:number_index+4]
+            break
+
+
+table_data_animation_2 = list(zip(movie_nums_animation_2, titles_animation_2, years_animation_2, ratings_animation_2))
+headers_2 = ["Movie Number", "Title", "Year", "Rating"]
+
+print(tabulate(table_data_animation_2, headers=headers_2))
+
+import pandas as pd
+df_animation_2 = pd.DataFrame(table_data_animation_2, columns=['Index', 'Title', 'Year', 'Rating'])
+df_animation_2
+df_animation_2['Title']
+df_animation_2['Genre'] = 'Animation'
+df_animation_2
+
+# Part 3, merging df_animation_1 and df_animation_2 for a total of 100 data entries
+df_animation = pd.concat([df_animation_1, df_animation_2])
+df_animation
