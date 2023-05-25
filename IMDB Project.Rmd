@@ -1,0 +1,145 @@
+---
+title: "IMDB Family/Non-Family Rating Project"
+author: "Kris Hao, Nixon, Anna, Mollie"
+output:
+    html_document:
+      toc: true
+      toc_float: true
+      toc_depth: 4
+      theme: journal
+    pdf_document:
+    toc: yes
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+
+Full_Adventure <- read.csv("Full_Adventure.csv")
+Full_Adventure <- as.data.frame(Full_Adventure); Full_Adventure
+Full_Adventure['Family?'] <- "Yes"
+Non_Family_Adventure <- read.csv("Non_Family_Adventure.csv")
+Non_Family_Adventure <- as.data.frame(Non_Family_Adventure); Non_Family_Adventure
+Non_Family_Adventure['Family?'] <- "No"
+
+Adventure <- rbind(Full_Adventure, Non_Family_Adventure); Adventure
+```
+
+```{r}
+Adventure %>% 
+  ggplot(aes(x = `Family?`, y = Rating, fill=`Family?`)) +
+  geom_boxplot() +
+  labs(y = "Rating", x = "Family") 
+```
+
+```{r}
+Adventure %>% 
+  ggplot(aes(x = `Family?`, y = Rating, fill = `Family?`))+
+  geom_bar(stat = "identity") +
+  labs(y = "Count", x = "Family?") +
+  theme_light()
+
+```
+```{r}
+set.seed(123)
+library(recipes)
+library(tidyverse)
+library(tidymodels)
+
+# adventure_split <- initial_split(Adventure, prop = 0.70, strata = 'Family?')
+# adventure_train <- training(adventure_split); adventure_train
+# adventure_test <- testing(adventure_split); adventure_test
+# adventure_recipe <- recipe(Rating ~., data=Adventure); adventure_recipe
+# 
+# prep(adventure_recipe) %>% 
+#   bake(new_data = adventure_train) %>% 
+#   head() %>% 
+#   kable() %>% 
+#   kable_styling(full_width = F) %>% 
+#   scroll_box(width = "100%", height = "200px")
+```
+
+```{r}
+Adventure %>%
+  group_by(`Family?`) %>%
+  summarize(Average_Rating = mean(Rating))
+```
+
+```{r}
+ggplot(Adventure, aes(x = Year, y = Rating, fill = `Family?`)) +
+  geom_point(shape = 21, size = 3) +
+  labs(y = "Rating", x = "Year") +
+  scale_fill_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  theme_bw()
+```
+
+```{r}
+family_yes_data_adventure <- filter(adventure_train, `Family?` == "Yes")
+family_no_data_adventure <- filter(adventure_train, `Family?` == "No")
+
+lm_model_yes_adventure <- lm(Rating ~ Year, data = family_yes_data_adventure)
+lm_model_no_adventure <- lm(Rating ~ Year, data = family_no_data_adventure)
+
+family_yes_predictions_adventure <- predict(lm_model_yes_adventure, newdata = family_yes_data_adventure); family_yes_predictions_adventure
+family_no_predictions_adventure <- predict(lm_model_no_adventure, newdata = family_no_data_adventure); family_no_predictions_adventure
+
+family_yes_mape_adventure <- mean(abs((family_yes_data_adventure$Rating - family_yes_predictions_adventure) / family_yes_data_adventure$Rating)) * 100 #mean absolute percentage error 
+family_no_mape_adventure <- mean(abs((family_no_data_adventure$Rating - family_no_predictions_adventure) / family_no_data_adventure$Rating)) * 100
+
+# Print MAPE for each model
+cat("Mean Absolute Percentage Error for 'Family?' = Yes:", family_yes_mape_adventure, "%\n")
+cat("Mean Absolute Percentage Error for 'Family?' = No:", family_no_mape_adventure, "%\n")
+
+ggplot(Adventure, aes(x = Year, y = Rating, fill = `Family?`)) +
+  geom_point(shape = 21, size = 3) +
+  geom_line(data = family_yes_data_adventure, aes(x = Year, y = family_yes_predictions_adventure, color = `Family?`), size = 1) +
+  geom_line(data = family_no_data_adventure, aes(x = Year, y = family_no_predictions_adventure, color = `Family?`), size = 1) +
+  labs(y = "Rating", x = "Year") +
+  scale_fill_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  scale_color_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  theme_bw()
+```
+
+```{r}
+library(broom)
+library(magrittr)
+
+# Calculate R-squared, RMSE, and MAE for "Family? = Yes"
+family_yes_summary_adventure <- family_yes_data_adventure %>%
+  mutate(family_yes_predictions_adventure = predict(lm_model_yes_adventure, newdata = family_yes_data_adventure)) %>%
+  summarise(
+    R_squared = 1 - sum((Rating - family_yes_predictions_adventure)^2) / sum((Rating - mean(Rating))^2),
+    RMSE = sqrt(mean((Rating - family_yes_predictions_adventure) ^ 2)),
+    MAE = mean(abs(Rating - family_yes_predictions_adventure))
+  )
+
+# Calculate R-squared, RMSE, and MAE for "Family? = No"
+family_no_summary_adventure <- family_no_data_adventure %>%
+  mutate(family_no_predictions_adventure = predict(lm_model_no_adventure, newdata = family_no_data_adventure)) %>%
+  summarise(
+    R_squared = 1 - sum((Rating - family_no_predictions_adventure)^2) / sum((Rating - mean(Rating))^2),
+    RMSE = sqrt(mean((Rating - family_no_predictions_adventure) ^ 2)),
+    MAE = mean(abs(Rating - family_no_predictions_adventure))
+  )
+
+# Print the model evaluation metrics
+cat("Model Evaluation 'Family?' = Yes:\n")
+cat("R-squared:", family_yes_summary_adventure$R_squared, "\n")
+cat("RMSE:", family_yes_summary_adventure$RMSE, "\n")
+cat("MAE:", family_yes_summary_adventure$MAE, "\n\n")
+
+cat("Model Evaluation 'Family?' = No:\n")
+cat("R-squared:", family_no_summary_adventure$R_squared, "\n")
+cat("RMSE:", family_no_summary_adventure$RMSE, "\n")
+cat("MAE:", family_no_summary_adventure$MAE, "\n")
+```
+
+For the 'Family?'=Yes model 12.73% of variability in ratings
