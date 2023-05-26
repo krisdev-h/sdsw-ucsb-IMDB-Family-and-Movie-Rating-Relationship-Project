@@ -12,6 +12,7 @@ output:
 editor_options: 
   markdown: 
     wrap: 72
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -45,38 +46,8 @@ prep(movie_recipe) %>%
   kable()
 ```
 
-```{r}
-library(ggplot2)
 
-movies %>%
-  group_by(Genre) %>%
-  summarise(Total_Ratings = sum(Rating)) %>%
-  ggplot(aes(x = Genre, y = Total_Ratings, fill=Genre)) +
-  geom_col() +
-  geom_text(aes(label = Total_Ratings), vjust = 10, color = "black") +
-  labs(y = "Total Ratings", x = "Genre") +
-  theme_bw()
-
-```
-
-
-
-```{r}
-movies %>% 
-  ggplot(aes(x = Family, y = Rating, fill=Family)) +
-  geom_boxplot() +
-  labs(y = "Rating", x = "Family") 
-```
-
-
-```{r}
-ggplot(movies, aes(x = Year, y = Rating, fill = Family)) +
-  geom_point(shape = 21, size = 3) +
-  labs(y = "Rating", x = "Year") +
-  scale_fill_manual(values = c("Yes" = "blue", "No" = "pink")) +
-  theme_bw()
-```
-
+#NEEDS FIXING
 ```{r}
 library(broom)
 library(yardstick)
@@ -147,6 +118,8 @@ autoplot(tune_log)
 
 
 
+
+
 ```{r}
 family_yes_data <- filter(movie_train, Family == "Yes")
 family_no_data <- filter(movie_train, Family == "No")
@@ -173,7 +146,6 @@ ggplot(movies, aes(x = Genre, y = Rating, fill = Family)) +
   scale_color_manual(values = c("Yes" = "blue", "No" = "pink")) +
   theme_bw()
 ```
-
 ```{r}
 library(broom)
 library(magrittr)
@@ -207,5 +179,155 @@ cat("R-squared:", family_no_summary$R_squared, "\n")
 cat("RMSE:", family_no_summary$RMSE, "\n")
 cat("MAE:", family_no_summary$MAE, "\n")
 ```
+
+
+
+
+
+##SHINY APP
+```{r}
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(shiny)
+
+# App 1: Total Ratings by Genre
+
+# UI function for App 1
+ui_app1 <- function(id) {
+  ns <- NS(id)
+  tagList(
+    actionButton(ns("toggle_ratings"), "Toggle Total Ratings"),
+    plotOutput(ns("genre_plot")),
+    conditionalPanel(
+      condition = "input.toggle_ratings > 0",
+      verbatimTextOutput(ns("ratings_output"))
+    )
+  )
+}
+
+# Server function for App 1
+server_app1 <- function(input, output, session) {
+  output$genre_plot <- renderPlot({
+    movies %>%
+      group_by(Genre) %>%
+      summarise(Total_Ratings = sum(Rating)) %>%
+      ggplot(aes(x = Genre, y = Total_Ratings, fill = Genre)) +
+      geom_col() +
+      labs(y = "Total Ratings", x = "Genre") +
+      theme_bw() +
+      if (input$toggle_ratings > 0) {
+        geom_text(aes(label = Total_Ratings), vjust = 10, color = "black")
+      }
+  })
+  
+  output$ratings_output <- renderPrint({
+    if (input$toggle_ratings > 0) {
+      movies %>%
+        group_by(Genre) %>%
+        summarise(Total_Ratings = sum(Rating))
+    }
+  })
+}
+
+# App 2: Movie Ratings by Year
+
+# UI function for App 2
+ui_app2 <- function(id) {
+  ns <- NS(id)
+  tagList(
+    checkboxInput(ns("show_fill_legend"), "Show Fill Legend", value = TRUE),
+    plotOutput(ns("movie_plot"))
+  )
+}
+
+# Server function for App 2
+server_app2 <- function(input, output, session) {
+  output$movie_plot <- renderPlot({
+    ggplot(movies, aes(x = Year, y = Rating, fill = Family)) +
+      geom_point(shape = 21, size = 3) +
+      labs(y = "Rating", x = "Year") +
+      if (input$show_fill_legend) {
+        scale_fill_manual(values = c("Yes" = "blue", "No" = "pink"))} 
+      else {
+        scale_fill_manual(values = c("Yes" = "black", "No" = "black"))} 
+  })
+}
+
+# UI for the main page
+ui <- fluidPage(
+  titlePanel("Data Visualizations"),
+  mainPanel(
+    h3("Barplot for Total Ratings for Each Genre"),
+    ui_app1("app1"),
+    h3("Year vs Ratings Scatterplot"),
+    ui_app2("app2")
+  )
+)
+
+# Server for the main page
+server <- function(input, output, session) {
+  callModule(server_app1, "app1")
+  callModule(server_app2, "app2")
+}
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server)
+
+
+```
+
+
+```{r}
+movies %>% 
+  ggplot(aes(x = Family, y = Rating, fill=Family)) +
+  geom_boxplot() +
+  labs(y = "Rating", x = "Family") 
+```
+
+
+```{r}
+ggplot(movies, aes(x = Year, y = Rating, fill = Family)) +
+  geom_point(shape = 21, size = 3) +
+  labs(y = "Rating", x = "Year") +
+  scale_fill_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  theme_bw()
+
+library(ggplot2)
+library(shiny)
+
+# UI function
+ui <- fluidPage(
+  titlePanel("Movie Ratings by Year"),
+  sidebarLayout(
+    sidebarPanel(
+      checkboxInput("show_fill_legend", "Show Fill Legend", value = TRUE)
+    ),
+    mainPanel(
+      plotOutput("movie_plot")
+    )
+  )
+)
+
+# Server function
+server <- function(input, output) {
+  output$movie_plot <- renderPlot({
+    ggplot(movies, aes(x = Year, y = Rating, fill = Family)) +
+      geom_point(shape = 21, size = 3) +
+      labs(y = "Rating", x = "Year") +
+      if (input$show_fill_legend) {
+        scale_fill_manual(values = c("Yes" = "blue", "No" = "pink"))
+      } 
+      else {
+        scale_fill_manual(values = c("Yes" = "black", "No" = "black"))
+      }
+  })
+}
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server)
+```
+
+
 
 For the 'Family?'=Yes model 12.73% of variability in ratings
