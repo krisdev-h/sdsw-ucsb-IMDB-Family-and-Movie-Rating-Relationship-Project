@@ -1,0 +1,249 @@
+---
+title: "Workshop"
+output: html_document
+date: "2023-05-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidymodels)
+library(ggplot2)
+library(corrplot)
+library(ggthemes)
+library(corrr)
+library(discrim)
+library(workflows)
+library(kknn)
+library(pROC)
+
+```
+
+
+```{r}
+movies <- read.csv("Total_Family_Data.csv")
+```
+
+build the recipe
+
+```{r}
+movie_split <- initial_split(movies, prop = 0.70, strata = Rating)
+movie_train <- training(movie_split); movie_train
+movie_test <- testing(movie_split); movie_test
+
+movie_fold <- vfold_cv(movie_train, v = 50)
+
+movie_recipe <- recipe(Rating ~Year+Genre+Family_Num+Family+Decade, data = movies) %>% 
+  step_dummy(all_nominal_predictors()); movie_recipe
+
+prep(movie_recipe) %>%
+  bake(new_data = movie_train) 
+```
+
+
+##Get a lm model
+
+```{r}
+lm_family_model <- linear_reg() %>%
+  set_engine("lm")
+
+lm_family_workflow <- workflow() %>% 
+  add_model(lm_family_model) %>% 
+  add_recipe(movie_recipe)
+
+```
+
+
+```{r}
+family_valid <- validation_split(movie_train, prop = .75, strata = Rating)
+
+lm_fit <- lm_family_workflow %>%
+  fit_resamples(resamples = family_valid)
+
+lm_fit2 <- fit(lm_family_workflow, movie_train)
+
+
+lm_metric<-collect_metrics(lm_fit)
+#collect_metrics(lm_fit2)
+
+
+best_lm <- lm_metric %>%
+  slice_min(order_by = .metric) %>%
+  slice_min(order_by = mean);best_lm
+
+```
+
+```{r}
+
+Hypo_Rate <- tibble(Genre = "Superhero", Year = 2023, Family_Num = 10, Family = "Yes",Decade = "2020s")
+predict(lm_fit2, new_data = Hypo_Rate)
+
+#predict(lm_fit, new_data = Hypo_Rate)
+
+```
+
+```{r}
+Family_Predidc_lm <- predict(lm_fit2,movie_test)
+Family_Predidc_lm <- bind_cols(Family_Predidc_lm, movie_test %>% select(Rating))
+
+Family_Metrics_lm <- metric_set(rmse, rsq, mae)
+Family_Metrics_lm(Family_Predidc_lm, truth = Rating, estimate = .pred)
+
+
+```
+
+
+
+
+##Get a KKNN Model
+```{r}
+knn_family_model <- nearest_neighbor(neighbors = tune()) %>% 
+  set_mode("regression")  %>% 
+  set_engine("kknn") 
+
+knn_family_workflow <- workflow() %>% 
+  add_model(knn_family_model) %>% 
+  add_recipe(movie_recipe)
+
+knn_fit <- fit(knn_family_workflow,movie_train)
+
+knn_fit %>%
+  extract_fit_parsnip()
+  
+```
+
+
+```{r}
+neighbors_grid2 <- grid_regular(neighbors(range = c(1, 200)), levels = 200)
+
+tune_family_kknn <- tune_grid(
+  object = knn_family_workflow, 
+  resamples = movie_fold, 
+  grid = neighbors_grid2,
+  control = control_grid(verbose = TRUE)
+)
+```
+
+
+```{r}
+autoplot(tune_family_kknn)
+metrics <- collect_metrics(tune_family_kknn)
+select_by_one_std_err(tune_family_kknn, desc(neighbors), metric = "rmse")
+```
+
+
+```{r}
+best_kknn <- select_by_one_std_err(tune_family_kknn, metric = "rmse", neighbors)
+
+best_kknn2 <- metrics %>%
+  slice_min(order_by = .metric) %>%
+  slice_min(order_by = mean);best_kknn2
+
+
+final_kknn_workflow <- finalize_workflow(knn_family_workflow, best_kknn2)
+```
+
+
+```{r}
+knn_fit <- fit(final_kknn_workflow,movie_train)
+
+predict(knn_fit, new_data = Hypo_Rate)
+```
+
+
+```{r}
+accuracies <- c(best_kknn2$mean, 
+                best_lm$mean)
+models <- c("KKNN", "Linear Model")
+results <- tibble(accuracies = accuracies, models = models)
+results %>%
+  arrange(-accuracies)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r cars}
+family_yes_data <- filter(movie_train, Family == "Yes")
+family_no_data <- filter(movie_train, Family == "No")
+
+lm_model_yes <- lm(Rating ~ Genre, data = family_yes_data)
+lm_model_no <- lm(Rating ~ Genre, data = family_no_data)
+
+family_yes_predictions <- predict(lm_model_yes, newdata = family_yes_data); family_yes_predictions
+family_no_predictions <- predict(lm_model_no, newdata = family_no_data); family_no_predictions
+
+family_yes_mape <- mean(abs((family_yes_data$Rating - family_yes_predictions) / family_yes_data$Rating)) * 100 #mean absolute percentage error 
+family_no_mape <- mean(abs((family_no_data$Rating - family_no_predictions) / family_no_data$Rating)) * 100
+
+
+
+
+ggplot(movies, aes(x = Genre, y = Rating, fill = Family)) +
+  geom_point(shape = 21, size = 3) +
+  #geom_line(data = family_yes_data, aes(x = Year, y = family_yes_predictions, color = Family), size = 1) +
+  #geom_line(data = family_no_data, aes(x = Year, y = family_no_predictions, color = Family), size = 1) +
+  labs(y = "Rating", x = "Genre") +
+  scale_fill_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  scale_color_manual(values = c("Yes" = "blue", "No" = "pink")) +
+  theme_bw()
+```
+
+
+
+
+```{r}
+movies %>% 
+  ggplot(aes(x = Family, y = Rating, fill=Decade)) +
+  geom_boxplot() +
+  labs(y = "Rating", x = "Family") 
+```
+
+
+```{r}
+movies %>% 
+  ggplot(aes(x = Family, y = Rating, fill=Genre)) +
+  geom_boxplot() +
+  labs(y = "Rating", x = "Family") 
+
+```
+
+
+
+```{r}
+ggplot(movies, aes(x=Family_Num, y=Rating)) + geom_point() + geom_smooth(method=lm)
+
+
+
+```
+
