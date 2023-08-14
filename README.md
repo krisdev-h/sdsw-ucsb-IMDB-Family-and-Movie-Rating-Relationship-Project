@@ -7,3 +7,5 @@ Utilizing `roc_auc` metrics, at the end of our modelling we
 determine that the Linear Discriminant Analysis was our top performing model as it had the highest `roc_auc` metric of 0.771, which we fit to our testing set. 
 
 Using a `rmse` or root mean square error metric for predicting whether movies are family related or not, we determine that the average difference between our predicted and actual values is around 9%. We finally generate interactive Shiny app visualizations for movie ratings, genre, and family relation. 
+
+**Please Reference our HTML Final Report for more Details**
