@@ -1,4 +1,4 @@
-# sdsw-ucsb-IMDB-Family-and-Movie-Rating-Relationship-Project
+# ucsb-ds-collab-IMDB-Family-and-Movie-Rating-Relationship-Project
 
 ## Abstract
 Our IMDb Family and Movie Rating Relationship Group Project utilizes 8 classification models: K-Nearest Neighbors, Random Forest, Elastic Net, Pruned Decision Tree, Gradient-Boosted Tree, Linear Discriminant Analysis, and Native Bayes. These models predict 3 rating range classes: `Low`, `Medium`, and `High`. 
@@ -8,4 +8,4 @@ determine that the Linear Discriminant Analysis was our top performing model as 
 
 Using a `rmse` or root mean square error metric for predicting whether movies are family related or not, we determine that the average difference between our predicted and actual values is around 9%. We finally generate interactive Shiny app visualizations for movie ratings, genre, and family relation. 
 
-**Please Reference our HTML Final Report for more Details**
+**Please Reference our MHT Final Report for more Details**
