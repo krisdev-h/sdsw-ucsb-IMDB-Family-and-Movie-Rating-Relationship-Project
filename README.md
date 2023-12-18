@@ -1,4 +1,4 @@
-# ucsb-ds-collab-IMDB-Family-and-Movie-Rating-Relationship-Project
+# ucsbdscollab-IMDB-Family-and-Movie-Rating-Relationship-Project
 
 ## Abstract
 Our IMDb Family and Movie Rating Relationship Group Project utilizes 8 classification models: K-Nearest Neighbors, Random Forest, Elastic Net, Pruned Decision Tree, Gradient-Boosted Tree, Linear Discriminant Analysis, and Native Bayes. These models predict 3 rating range classes: `Low`, `Medium`, and `High`. 
